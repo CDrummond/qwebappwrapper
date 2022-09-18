@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+
+import sys
+from PyQt5.QtCore import QCommandLineOption, QCommandLineParser, QPoint, QSettings, QSize, Qt, QUrl
+from PyQt5.QtGui import QDesktopServices, QKeySequence
+from PyQt5.QtWidgets import QAction, QApplication, QMainWindow
+from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineProfile, QWebEngineView
+
+USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
+
+class MainWindow(QMainWindow):
+
+    def __init__(self, url, defZoom):
+        super(MainWindow, self).__init__()
+        self.web = QWebEngineView()
+        self.settings = QSettings()
+        self.url = QUrl(url)
+        page = WebEngingPage(QWebEngineProfile.defaultProfile(), self.web)
+        self.web.setPage(page)
+        self.web.load(self.url)
+        self.web.setContextMenuPolicy(Qt.NoContextMenu)
+        self.web.titleChanged.connect(self.setWindowTitle)
+        self.setCentralWidget(self.web)
+
+        refreshAction = QAction("refresh", self)
+        refreshAction.triggered.connect(self.refresh);
+        refreshAction.setShortcut(QKeySequence.Refresh)
+        self.addAction(refreshAction)
+        zoomInAction = QAction("zoomIn", self)
+        zoomInAction.triggered.connect(self.zoomIn);
+        zoomInAction.setShortcut(QKeySequence.ZoomIn)
+        self.addAction(zoomInAction)
+        zoomOutAction = QAction("zoomOut", self)
+        zoomOutAction.triggered.connect(self.zoomOut);
+        zoomOutAction.setShortcut(QKeySequence.ZoomOut)
+        self.addAction(zoomOutAction)
+
+        geo = self.settings.value("windowGeometry")
+        state = self.settings.value("windowState")
+        cfgZoom = self.settings.value("zoom")
+
+        if geo:
+            self.restoreGeometry(geo)
+        else:
+            self.resize(800, 600)
+
+        if state:
+            self.restoreState(state)
+
+        if cfgZoom is not None:
+            self.web.setZoomFactor(float(cfgZoom))
+        elif defZoom is not None:
+            self.web.setZoomFactor(defZoom)
+
+
+    def refresh(self):
+        self.web.reload()
+        current = self.web.url();
+        self.web.stop();
+        self.web.load(QUrl("http://127.1.1.1:1/a/b"));
+        self.web.stop();
+        QWebEngineProfile.defaultProfile().clearHttpCache();
+        self.web.load(current);
+
+    def zoomIn(self):
+        zoom = self.web.zoomFactor()
+        if zoom<=4.75:
+            self.web.setZoomFactor(zoom+0.25)
+
+    def zoomOut(self):
+        zoom = self.web.zoomFactor()
+        if zoom>=0.5:
+            self.web.setZoomFactor(zoom-0.25)
+
+
+    def closeEvent(self, e):
+        self.settings.setValue("windowGeometry", self.saveGeometry())
+        self.settings.setValue("windowState", self.saveState())
+        self.settings.setValue("zoom", self.web.zoomFactor())
+
+
+class WebEngingPage(QWebEnginePage):
+
+    def acceptNavigationRequest(self, url, _type, isMainFrame):
+        if _type == QWebEnginePage.NavigationTypeLinkClicked:
+            QDesktopServices.openUrl(url)
+            return False
+        return super().acceptNavigationRequest(url, _type, isMainFrame)
+
+
+def main(app):
+    app.setOrganizationName("QtWA")
+    app.setApplicationName("QtWA")
+    app.setApplicationVersion("0.0.1")
+
+    parser = QCommandLineParser()
+    parser.addHelpOption()
+    parser.addVersionOption()
+
+    appNameOption = QCommandLineOption(["a", "appname"], "Application name", "NAME")
+    parser.addOption(appNameOption)
+    cacheOption = QCommandLineOption(["c", "cache-size"], "Max size of cache", "NUM")
+    parser.addOption(cacheOption)
+    darkOption = QCommandLineOption(["d", "dark"], "Use dark theme")
+    parser.addOption(darkOption)
+    zoomOption = QCommandLineOption(["z", "zoom"], "Zoom", "NUM")
+    parser.addOption(zoomOption)
+
+    parser.process(app)
+
+    if parser.isSet(darkOption):
+        app.setProperty("KDE_COLOR_SCHEME_PATH", "/usr/share/color-schemes/BreezeDark.colors")
+        app.setStyleSheet("QToolTip{background-color:#121212;color:#eee}")
+
+    appName = parser.value(appNameOption)
+    maxCacheSize = parser.isSet(cacheOption) and int(parser.value(cacheOption)) or 0
+    if maxCacheSize>0 and maxCacheSize<1024:
+        maxCacheSize *= 1024
+    zoom = parser.isSet(zoomOption) and float(parser.value(zoomOption)) or None
+    if zoom is not None and zoom>5:
+        zoom /= 100.0
+
+    QWebEngineProfile.defaultProfile().setHttpCacheMaximumSize(maxCacheSize)
+    QWebEngineProfile.defaultProfile().setHttpUserAgent(USER_AGENT)
+
+    if appName:
+        app.setApplicationName(appName)
+        app.setOrganizationName(appName)
+
+    args = parser.positionalArguments()
+    if None==args or len(args)!=1:
+        print("ERROR: Please supply one URL")
+    else:
+        window = MainWindow(args[0], zoom)
+        window.show();
+        sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    main(app)
