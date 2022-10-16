@@ -80,7 +80,6 @@ void MainWindow::reload() {
     QUrl current = web->url();
     web->stop();
     web->load(QUrl("http://127.1.1.1:1/a/b"));
-    web->stop();
     QWebEngineProfile::defaultProfile()->clearHttpCache();
     web->load(current);
 }
