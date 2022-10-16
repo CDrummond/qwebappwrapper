@@ -58,7 +58,6 @@ class MainWindow(QMainWindow):
         current = self.web.url();
         self.web.stop();
         self.web.load(QUrl("http://127.1.1.1:1/a/b"));
-        self.web.stop();
         QWebEngineProfile.defaultProfile().clearHttpCache();
         self.web.load(current);
 
