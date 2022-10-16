@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-from PyQt5.QtCore import QCommandLineOption, QCommandLineParser, QPoint, QSettings, QSize, Qt, QUrl
+from PyQt5.QtCore import QCommandLineOption, QCommandLineParser, QPoint, QSettings, QSize, Qt, QTimer, QUrl
 from PyQt5.QtGui import QDesktopServices, QKeySequence
 from PyQt5.QtWidgets import QAction, QApplication, QMainWindow
 from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineProfile, QWebEngineView
@@ -54,17 +54,16 @@ class MainWindow(QMainWindow):
 
 
     def refresh(self):
-        self.web.reload()
-        current = self.web.url();
         self.web.stop();
-        self.web.load(QUrl("http://127.1.1.1:1/a/b"));
         QWebEngineProfile.defaultProfile().clearHttpCache();
-        self.web.load(current);
+        QTimer.singleShot(500, self.web.reload)
+
 
     def zoomIn(self):
         zoom = self.web.zoomFactor()
         if zoom<=4.75:
             self.web.setZoomFactor(zoom+0.25)
+
 
     def zoomOut(self):
         zoom = self.web.zoomFactor()

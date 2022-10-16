@@ -25,6 +25,7 @@
 #include "webenginepage.h"
 #include <QtCore/QSettings>
 #include <QtCore/QSize>
+#include <QtCore/QTimer>
 #include <QtCore/QUrl>
 #include <QtGui/QKeySequence>
 #include <QtWebEngineWidgets/QWebEngineProfile>
@@ -77,11 +78,9 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 }
 
 void MainWindow::reload() {
-    QUrl current = web->url();
     web->stop();
-    web->load(QUrl("http://127.1.1.1:1/a/b"));
     QWebEngineProfile::defaultProfile()->clearHttpCache();
-    web->load(current);
+    QTimer::singleShot(500, web, &QWebEngineView::reload);
 }
 
 void MainWindow::zoomIn() {
